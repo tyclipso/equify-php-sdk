@@ -1,0 +1,29 @@
+{
+  "name": "tyclipso/equify-php-sdk",
+  "description": "PHP SDK for using the equify API",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+	{
+	  "name": "tyclipso",
+	  "role": "Author",
+	  "homepage": "https://github.com/tyclipso/equify-php-sdk"
+	}
+  ],
+  "homepage": "https://github.com/tyclipso/equify-php-sdk",
+  "autoload": {
+	"psr-4": {
+	  "equifySDK\\": "sdk/classes/"
+	}
+  },
+  "repositories": [
+	{
+	  "type": "git",
+	  "url": "https://github.com/tyclipso/equify-php-sdk",
+	  "name": "GitHub"
+	}
+  ],
+  "require": {
+	"php": ">=7.2.0"
+  }
+}
