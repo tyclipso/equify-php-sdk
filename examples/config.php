@@ -4,7 +4,7 @@
  */
 use equifySDK\Request;
 
-require_once(__DIR__.'/../sdk/equifySDK.php');
+require_once(__DIR__.'/../../../autoload.php');
 Request::setDefaultAPIHost('https://staging.equify.de');
 // The API path. Has to start and end with a slash
 Request::setDefaultAPIPath('/v2/');

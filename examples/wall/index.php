@@ -68,16 +68,22 @@ if ($_POST)
 if (empty($messages)) {
     $messages = array();
 }
-// Load all projects for the select box
-$allProjectsRequest = new Request('projects');
-$allProjectsResponse = $allProjectsRequest->send();
-// Use projects from response
-$projects = $allProjectsResponse->getData('projects');
+try {
+	// Load all projects for the select box
+	$allProjectsRequest = new Request('projects');
+	$allProjectsResponse = $allProjectsRequest->send();
+	// Use projects from response
+	$projects = $allProjectsResponse->getData('projects');
+} catch (Exception $e) {
+	$projects = [];
+	$errorMessage = 'Could not load projects - check your configuration';
+}
 ?>
 <html>
 	<head>
 	</head>
 	<body>
+		<?php if ($errorMessage) { ?><div><strong><?php echo $errorMessage; ?></strong></div><?php } ?>
 		<div><strong>Projects</strong></div>
 		<form method="post" action="">
 			<select name="projectID">
