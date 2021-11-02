@@ -17,7 +17,8 @@ class Request
 	protected static $defaultAPISecret;
 	protected static $defaultAuthUser;
 	protected static $defaultAuthPassword;
-	
+	protected static $defaultCurlOptions = [];
+
 	protected $apiHost;
 	protected $apiPath;
 	protected $apiKey;
@@ -25,37 +26,99 @@ class Request
 	protected $endpoint;
 	protected $method;
 	
-	private $params = array();
+	private $params = [];
+    private $curlOptions = [];
 	private $authUser;
 	private $authPassword;
-	
-	public static function setDefaultAPIHost($value)
+
+    /**
+     * @param ?string $value
+     */
+	public static function setDefaultAPIHost(?string $value)
 	{
 		static::$defaultAPIHost = $value;
 	}
-	
-	public static function setDefaultAPIPath($value)
+
+    /**
+     * @param ?string $value
+     */
+	public static function setDefaultAPIPath(?string $value)
 	{
 		static::$defaultAPIPath = $value;
 	}
-	
-	public static function setDefaultAPIKey($value)
+
+    /**
+     * @param ?string $value
+     */
+	public static function setDefaultAPIKey(?string $value)
 	{
 		static::$defaultAPIKey = $value;
 	}
-	
-	public static function setDefaultAPISecret($value)
+
+    /**
+     * @param ?string $value
+     */
+	public static function setDefaultAPISecret(?string $value)
 	{
 		static::$defaultAPISecret = $value;
 	}
-	
-	public static function setDefaultAuthData($username, $password)
+
+    /**
+     * @param ?string $username
+     * @param ?string $password
+     */
+	public static function setDefaultAuthData(?string $username, ?string $password)
 	{
 		static::$defaultAuthUser = $username;
 		static::$defaultAuthPassword = $password;
 	}
-	
-	public function __construct($endpoint, $method = self::METHOD_GET, $apiKey = null, $apiSecret = null, $apiHost = null, $apiPath = null)
+
+    /**
+     * You can set an array with default curl options that are used on every request.
+     * They can be overridden for individual requests with the setCurlOption() method
+     * @param array $options
+     */
+    public static function setDefaultCurlOptions(array $options)
+    {
+        static::$defaultCurlOptions = $options;
+    }
+
+    /**
+     * Get the currently set default curl options
+     * @return array
+     */
+    public static function getDefaultCurlOptions(): array
+    {
+        return static::$defaultCurlOptions;
+    }
+
+    /**
+     * The default connection timeout.
+     * @param ?int $timeout
+     */
+    public static function setDefaultConnectionTimeout(?int $timeout)
+    {
+        static::$defaultCurlOptions[CURLOPT_CONNECTTIMEOUT] = $timeout;
+    }
+
+    /**
+     * The default timeout for the whole curl transaction.
+     * @param ?int $timeout
+     */
+    public static function setDefaultTimeout(?int $timeout)
+    {
+        static::$defaultCurlOptions[CURLOPT_TIMEOUT] = $timeout;
+    }
+
+    /**
+     * @param string $endpoint
+     * @param string $method
+     * @param ?string $apiKey
+     * @param ?string $apiSecret
+     * @param ?string $apiHost
+     * @param ?string $apiPath
+     */
+	public function __construct(string $endpoint, string $method = self::METHOD_GET, ?string $apiKey = null, ?string $apiSecret = null, ?string $apiHost = null, ?string $apiPath = null)
 	{
 		$this->endpoint = $endpoint;
 		$this->method = $method;
@@ -69,37 +132,96 @@ class Request
 		else $this->apiSecret = static::$defaultAPISecret;
 		$this->authUser = static::$defaultAuthUser;
 		$this->authPassword = static::$defaultAuthPassword;
+        $this->curlOptions = static::$defaultCurlOptions;
 	}
-	
-	public function setAuthData($username, $password)
+
+    /**
+     * @param ?string $username
+     * @param ?string $password
+     */
+	public function setAuthData(?string $username, ?string $password)
 	{
 		$this->authUser = $username;
 		$this->authPassword = $password;
 	}
-	
+
+    /**
+     * @param array $params
+     */
 	public function setParams(array $params)
 	{
 		$this->params = $params;
 	}
-	
+
+    /**
+     * @param mixed $param
+     * @param mixed $value
+     */
 	public function setParam($param, $value)
 	{
 		if ($value !== null) $this->params[$param] = $value;
 		else unset($this->params[$param]);
 	}
-	
-	public function getParams()
+
+    /**
+     * @return array
+     */
+	public function getParams(): array
 	{
 		return $this->params;
 	}
-	
-	protected function getSignature($timestamp)
+
+    /**
+     * @param mixed $key The curl option, something like CURLOPT_TIMEOUT
+     * @param mixed $value The value of the option
+     */
+    public function setCurlOption($key, $value)
+    {
+        $this->curlOptions[$key] = $value;
+    }
+
+    /**
+     * @param mixed $key The curl option, something like CURLOPT_TIMEOUT
+     * @return mixed|null
+     */
+    public function getCurlOption($key)
+    {
+        if (isset($this->curlOptions[$key])) return $this->curlOptions[$key];
+        return null;
+    }
+
+    /**
+     * Sets the timeout for this specific request
+     * @param ?int $timeout
+     */
+    public function setTimeout(?int $timeout)
+    {
+        $this->setCurlOption(CURLOPT_TIMEOUT, $timeout);
+    }
+
+    /**
+     * Sets the connection timeout for this specific request
+     * @param ?int $timeout
+     */
+    public function setConnectionTimeout(?int $timeout)
+    {
+        $this->setCurlOption(CURLOPT_CONNECTTIMEOUT, $timeout);
+    }
+
+    /**
+     * @param $timestamp
+     * @return string
+     */
+	protected function getSignature($timestamp): string
 	{
 		$data = $this->apiPath.$this->endpoint.$timestamp.$this->apiSecret;
-		return hash('sha256', $data);
+		return (string)hash('sha256', $data);
 	}
-	
-	protected function getSignedParams()
+
+    /**
+     * @return array
+     */
+	protected function getSignedParams(): array
 	{
 		$params = $this->params;
 		$params['apiKey'] = $this->apiKey;
@@ -113,12 +235,16 @@ class Request
 	 * @return Response
 	 * @throws Exception
 	 */
-	public function send()
+	public function send(): Response
 	{
 		if (!$this->apiHost) throw new Exception(self::EXCEPTION_CONNECTION_FAILED);
 		// Send request
 		$ch = curl_init();
 		$url = $this->apiHost.$this->apiPath.$this->endpoint;
+        // Add user defined curl options
+        foreach ($this->curlOptions as $cKey => $cValue) {
+            curl_setopt($ch, $cKey, $cValue);
+        }
 		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 		// Pass the fields depending on the request method
 		if ($this->method == self::METHOD_POST) curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($this->getSignedParams()));
